@@ -750,7 +750,7 @@ Regras:
     }catch(e){addMsg('ai',reply);}
   }catch(e){removeTyping();addMsg('ai','Erro de conexão.');}
   document.getElementById('send-btn').disabled=false;
-}
+} 
 function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
 
