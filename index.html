@@ -372,26 +372,36 @@ function getLancsMes(mes,incProj=true){
 function calcMes(mes){
   const lancs=getLancsMes(mes);
   const h=HIST.find(x=>x.mes===mes);
-  let sal=h?h.sal:0,reimb=h?h.reimb:0,gpes=h?h.gpes:0,card=h?h.card:0,vanc=h?h.vanc:0;
-  let pix_t=0,cred_t=0,pixrec_t=0;
-  let nu=0,c6=0,san=0;
+  // Para meses históricos, usamos os totais da planilha
+  // Para meses novos (sem histórico), tudo parte do zero
+  let sal=h?h.sal:0, reimb=h?h.reimb:0, gpes_hist=h?h.gpes:0, card_hist=h?h.card:0, vanc=h?h.vanc:0;
+  let pix_t=0, cred_t=0, pixrec_t=0;
+  let nu=0, c6=0, san=0;
+
   lancs.forEach(l=>{
-    if(l.tipo==='sal') sal+=l.valor;
-    else if(l.tipo==='reimb') reimb+=l.valor;
-    else if(l.tipo==='pixrec') pixrec_t+=l.valor;
-    else if(l.tipo==='vanc') vanc+=l.valor;
+    if(l.tipo==='sal')       sal+=l.valor;
+    else if(l.tipo==='reimb')   reimb+=l.valor;
+    else if(l.tipo==='pixrec')  pixrec_t+=l.valor;
+    else if(l.tipo==='vanc')    vanc+=l.valor;
     else if(l.tipo==='parc'||l.tipo==='card'){
-      gpes+=l.valor;card+=l.valor;cred_t+=l.valor;
-      if(l.banco==='Nubank') nu+=l.valor;
-      else if(l.banco==='C6') c6+=l.valor;
-      else san+=l.valor;
+      cred_t+=l.valor;
+      if(l.banco==='Nubank')   nu+=l.valor;
+      else if(l.banco==='C6')  c6+=l.valor;
+      else                     san+=l.valor;
     }
-    else if(l.tipo==='pix'){gpes+=l.valor;pix_t+=l.valor;}
+    else if(l.tipo==='pix')     pix_t+=l.valor;
   });
-  const rec_total=sal+reimb+pixrec_t;
-  const liq=gpes-reimb;
-  const saldo=rec_total-(liq+card);
-  return{sal,reimb,pixrec_t,rec_total,gpes,card,vanc,liq,saldo,pix_t,cred_t,nu,c6,san};
+
+  // gastos totais = histórico + novos lançamentos
+  const gpes   = gpes_hist + pix_t + cred_t;
+  const card   = card_hist + cred_t;
+  const nu_t   = nu, c6_t=c6, san_t=san; // apenas dos novos; histórico não tem cartão separado
+  const rec_total = sal + reimb + pixrec_t;
+  // gastos líquidos = total gasto - reembolsos recebidos
+  const liq    = gpes - reimb;
+  // saldo = receitas - gastos líquidos (crédito já está dentro de gpes)
+  const saldo  = rec_total - liq;
+  return{sal,reimb,pixrec_t,rec_total,gpes,card,vanc,liq,saldo,pix_t,cred_t,nu:nu_t,c6:c6_t,san:san_t};
 }
 
 function popSels(){
