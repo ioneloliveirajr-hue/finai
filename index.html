@@ -164,7 +164,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
       <div class="logo">fin<span>ai</span></div>
       <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;" id="mes-label"></div>
     </div>
-    <div class="header-sub">controle financeiro com ia · ionel · v5</div>
+    <div class="header-sub">controle financeiro com ia · ionel · v6</div>
   </div>
   <div class="nav">
     <button class="nav-btn active" onclick="goTab('dash')">dashboard</button>
@@ -183,12 +183,24 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
       </div>
       <div class="metrics" id="dash-met"></div>
 
-      <div class="caixinha-box" id="caixinha-box">
-        <div>
-          <div class="caixinha-lbl">caixinha necessária</div>
-          <div class="caixinha-desc">total no crédito + parcelas deste mês</div>
+      <div id="caixinha-box" style="border-radius:var(--border-radius-lg,12px);border:1px solid #1a4d2a;background:#0c2d1a;padding:.875rem 1rem;margin-bottom:.875rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div>
+            <div style="font-size:11px;color:#4ade80;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;">caixinha necessária</div>
+            <div style="font-size:10px;color:#2d7a45;margin-top:1px;">total a reservar para fatura</div>
+          </div>
+          <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:#4ade80;" id="caixinha-tot">R$ 0,00</div>
         </div>
-        <div class="caixinha-val" id="caixinha-val">R$ 0</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+          <div style="background:#0a1e10;border:1px solid #1a4d2a;border-radius:8px;padding:6px 10px;">
+            <div style="font-size:10px;color:#2d7a45;font-family:'DM Mono',monospace;margin-bottom:2px;">pessoal</div>
+            <div style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:#4ade80;" id="caixinha-pes">R$ 0,00</div>
+          </div>
+          <div style="background:#1a1000;border:1px solid #3d2500;border-radius:8px;padding:6px 10px;">
+            <div style="font-size:10px;color:#854F0B;font-family:'DM Mono',monospace;margin-bottom:2px;">vancouver (ressarcido)</div>
+            <div style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:#fbbf24;" id="caixinha-vanc">R$ 0,00</div>
+          </div>
+        </div>
       </div>
 
       <div class="fat-grid" id="fat-grid"></div>
@@ -274,7 +286,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
             <div class="form-g"><label>total de parcelas</label><input type="number" id="f-pt" placeholder="10" min="1" inputmode="numeric"></div>
           </div>
         </div>
-        <div id="vanc-hint" class="hint-box hint-vanc" style="display:none;">Gasto custeado pela Vancouver. Não afeta seu saldo pessoal.</div>
+        <div id="vanc-hint" class="hint-box hint-vanc" style="display:none;">
+          Gasto custeado pela Vancouver. Não afeta seu saldo pessoal.<br>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+            <span style="font-size:11px;color:#c8a060;">Forma de pagamento:</span>
+            <button id="vanc-deb-btn" onclick="setVancTipo('deb')" style="padding:3px 10px;border-radius:99px;border:1px solid #854F0B;font-size:11px;cursor:pointer;background:#3d2500;color:#fbbf24;font-family:'Sora',sans-serif;">débito/pix</button>
+            <button id="vanc-cred-btn" onclick="setVancTipo('cred')" style="padding:3px 10px;border-radius:99px;border:1px solid #3d2500;font-size:11px;cursor:pointer;background:transparent;color:#8a6030;font-family:'Sora',sans-serif;">crédito (milhas)</button>
+          </div>
+        </div>
         <button class="add-btn" onclick="addLanc()">+ adicionar lançamento</button>
       </div>
     </div>
@@ -309,6 +328,17 @@ const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agos
 let DB=JSON.parse(localStorage.getItem('finai_db')||'[]');
 let apiKey=localStorage.getItem('finai_key')||'';
 let tipoAtual='sal';
+let vancCredito=false;
+
+function setVancTipo(t){
+  vancCredito=(t==='cred');
+  document.getElementById('vanc-deb-btn').style.background=vancCredito?'transparent':'#3d2500';
+  document.getElementById('vanc-deb-btn').style.color=vancCredito?'#8a6030':'#fbbf24';
+  document.getElementById('vanc-deb-btn').style.borderColor=vancCredito?'#3d2500':'#854F0B';
+  document.getElementById('vanc-cred-btn').style.background=vancCredito?'#3d2500':'transparent';
+  document.getElementById('vanc-cred-btn').style.color=vancCredito?'#fbbf24':'#8a6030';
+  document.getElementById('vanc-cred-btn').style.borderColor=vancCredito?'#854F0B':'#3d2500';
+}
 let pendingLanc=null;
 let charts={};
 
@@ -375,11 +405,16 @@ function calcMes(mes){
   let sal=h?h.sal:0, reimb_hist=h?h.reimb:0, gpes_hist=h?h.gpes:0, card_hist=h?h.card:0, vanc=h?h.vanc:0;
   let pix_t=0, cred_t=0, rec_extra=0;
   let nu=0, c6=0, san=0;
+  let vanc_pix=0, vanc_card=0;
 
   lancs.forEach(l=>{
-    if(l.tipo==='sal')                      sal+=l.valor;
+    if(l.tipo==='sal')                           sal+=l.valor;
     else if(l.tipo==='reimb'||l.tipo==='pixrec') rec_extra+=l.valor;
-    else if(l.tipo==='vanc')                vanc+=l.valor;
+    else if(l.tipo==='vanc'){
+      vanc+=l.valor;
+      if(l.credito) vanc_card+=l.valor;
+      else          vanc_pix+=l.valor;
+    }
     else if(l.tipo==='parc'||l.tipo==='card'){
       cred_t+=l.valor;
       if(l.banco==='Nubank')      nu+=l.valor;
@@ -389,12 +424,16 @@ function calcMes(mes){
     else if(l.tipo==='pix') pix_t+=l.valor;
   });
 
-  const gpes     = gpes_hist + pix_t + cred_t;
-  const card     = card_hist + cred_t;
-  const rec_total= sal + rec_extra + reimb_hist;
-  const liq      = gpes;
-  const saldo    = rec_total - liq;
-  return{sal,reimb:rec_extra,pixrec_t:rec_extra,rec_total,gpes,card,vanc,liq,saldo,pix_t,cred_t,nu,c6,san};
+  const gpes      = gpes_hist + pix_t + cred_t;
+  const card      = card_hist + cred_t;
+  const rec_total = sal + rec_extra + reimb_hist;
+  const liq       = gpes;
+  const saldo     = rec_total - liq;
+  // caixinha = crédito pessoal + Vancouver crédito (total a reservar para fatura)
+  const caixinha_pes  = card;
+  const caixinha_vanc = vanc_card;
+  const caixinha_tot  = caixinha_pes + caixinha_vanc;
+  return{sal,reimb:rec_extra,pixrec_t:rec_extra,rec_total,gpes,card,vanc,vanc_pix,vanc_card,liq,saldo,pix_t,cred_t,nu,c6,san,caixinha_pes,caixinha_vanc,caixinha_tot};
 }
 
 function popSels(){
@@ -420,7 +459,9 @@ function renderDash(){
     <div class="met"><div class="met-lbl">saldo estimado</div><div class="met-val ${c.saldo>=0?'mv-g':'mv-r'}">${c.saldo<0?'− ':''}${fmt(c.saldo)}</div></div>
     <div class="met"><div class="met-lbl">pix / débito</div><div class="met-val mv-r">${fmt(c.pix_t)}</div></div>
     <div class="met"><div class="met-lbl">crédito total</div><div class="met-val mv-b">${fmt(c.cred_t)}</div></div>`;
-  document.getElementById('caixinha-val').textContent=fmt(c.card);
+  document.getElementById('caixinha-tot').textContent=fmt(c.caixinha_tot);
+  document.getElementById('caixinha-pes').textContent=fmt(c.caixinha_pes);
+  document.getElementById('caixinha-vanc').textContent=fmt(c.caixinha_vanc);
   document.getElementById('fat-grid').innerHTML=`
     <div class="fat-box fat-nu"><div class="fat-lbl" style="color:var(--pink);">Nubank</div><div class="fat-val mv-p">${fmt(c.nu)}</div></div>
     <div class="fat-box fat-c6"><div class="fat-lbl" style="color:var(--amber);">C6</div><div class="fat-val mv-a">${fmt(c.c6)}</div></div>
@@ -607,6 +648,7 @@ function addLanc(){
   const banco=document.getElementById('f-banco').value;
   if(!desc||isNaN(valor)||valor<=0){alert('Preencha descrição e valor.');return;}
   const l={id:Date.now(),tipo:tipoAtual,desc,valor,data,cat,banco};
+  if(tipoAtual==='vanc') l.credito=vancCredito;
   if(tipoAtual==='parc'){
     const pa=parseInt(document.getElementById('f-pa').value)||1;
     const pt=parseInt(document.getElementById('f-pt').value)||1;
