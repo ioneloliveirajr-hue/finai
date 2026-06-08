@@ -384,7 +384,8 @@ function calcMes(mes){
     }
     else if(l.tipo==='pix'){gpes+=l.valor;pix_t+=l.valor;}
   });
-  return{sal,reimb,gpes,card,vanc,liq:gpes-reimb,pix_t,cred_t,nu,c6,san};
+  const rec_total=sal+reimb;
+  return{sal,reimb,rec_total,gpes,card,vanc,liq:gpes-reimb,pix_t,cred_t,nu,c6,san};
 }
 
 function popSels(){
@@ -405,10 +406,10 @@ function renderDash(){
   const[y,mo]=mes.split('-');
   document.getElementById('mes-label').textContent=MESES[parseInt(mo)-1]+' '+y;
   const c=calcMes(mes);
-  const saldo=c.sal-(c.liq+c.card);
+  const saldo=c.rec_total-(c.liq+c.card);
   document.getElementById('dash-met').innerHTML=`
-    <div class="met"><div class="met-lbl">receitas</div><div class="met-val mv-g">${fmt(c.sal)}</div></div>
-    <div class="met"><div class="met-lbl">gastos líquidos</div><div class="met-val mv-r">${fmt(c.liq)}</div></div>
+    <div class="met"><div class="met-lbl">receitas (sal + reimb)</div><div class="met-val mv-g">${fmt(c.rec_total)}</div></div>
+    <div class="met"><div class="met-lbl">saldo estimado</div><div class="met-val ${saldo>=0?'mv-g':'mv-r'}">${saldo<0?'− ':''}${fmt(saldo)}</div></div>
     <div class="met"><div class="met-lbl">pix / débito</div><div class="met-val mv-r">${fmt(c.pix_t)}</div></div>
     <div class="met"><div class="met-lbl">crédito total</div><div class="met-val mv-b">${fmt(c.cred_t)}</div></div>`;
   document.getElementById('caixinha-val').textContent=fmt(c.card);
@@ -500,18 +501,19 @@ function renderEx(){
     <div class="ex-box">
       <div class="ex-section">receitas</div>
       <div class="ex-row"><span>salário + entradas</span><span class="mv-g">${fmt(c.sal)}</span></div>
+      <div class="ex-row sub"><span>(+) reembolsos recebidos</span><span class="mv-g">+ ${fmt(c.reimb)}</span></div>
+      <div class="ex-row"><span>total receitas</span><span class="mv-g">${fmt(c.rec_total)}</span></div>
       <div class="ex-section">gastos pessoais</div>
-      <div class="ex-row"><span>pix / débito</span><span class="mv-r">${fmt(c.pix_t)}</span></div>
-      <div class="ex-row"><span>crédito (caixinha)</span><span class="mv-b">${fmt(c.cred_t)}</span></div>
+      <div class="ex-row sub"><span>pix / débito</span><span class="mv-r">${fmt(c.pix_t)}</span></div>
+      <div class="ex-row sub"><span>crédito (caixinha)</span><span class="mv-b">${fmt(c.cred_t)}</span></div>
       <div class="ex-row"><span>total bruto</span><span class="mv-r">${fmt(c.gpes)}</span></div>
-      <div class="ex-row sub"><span>(−) reembolsos recebidos</span><span class="mv-p">− ${fmt(c.reimb)}</span></div>
       <div class="ex-row"><span>gastos líquidos</span><span class="mv-r">${fmt(c.liq)}</span></div>
       <div class="ex-section">fatura cartões pessoais</div>
       <div class="ex-row sub"><span>Nubank</span><span class="mv-p">${fmt(c.nu)}</span></div>
       <div class="ex-row sub"><span>C6</span><span class="mv-a">${fmt(c.c6)}</span></div>
       <div class="ex-row sub"><span>Santander</span><span class="mv-t">${fmt(c.san)}</span></div>
       <div class="ex-row"><span>total fatura</span><span class="mv-b">${fmt(c.card)}</span></div>
-      <div class="ex-row"><span>custo real do mês</span><span class="${total>c.sal?'mv-r':'mv-g'}">${fmt(total)}</span></div>
+      <div class="ex-row"><span>custo real do mês</span><span class="${total>c.rec_total?'mv-r':'mv-g'}">${fmt(total)}</span></div>
     </div>
     <div class="ex-box ex-vanc">
       <div class="ex-section" style="color:var(--amber);">vancouver — empresa custeia</div>
