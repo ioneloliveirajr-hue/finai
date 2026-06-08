@@ -164,7 +164,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
       <div class="logo">fin<span>ai</span></div>
       <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;" id="mes-label"></div>
     </div>
-    <div class="header-sub">controle financeiro com ia · ionel</div>
+    <div class="header-sub">controle financeiro com ia · ionel · v4</div>
   </div>
   <div class="nav">
     <button class="nav-btn active" onclick="goTab('dash')">dashboard</button>
@@ -750,7 +750,7 @@ Regras:
     }catch(e){addMsg('ai',reply);}
   }catch(e){removeTyping();addMsg('ai','Erro de conexão.');}
   document.getElementById('send-btn').disabled=false;
-} 
+}
 function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
 
