@@ -88,6 +88,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
 .t-sal{background:#16400f;color:var(--green);}.t-pix{background:#14401a;color:#86efac;}
 .t-reimb{background:#3d1254;color:#d8b4fe;}.t-card{background:#0c2d4a;color:var(--blue);}
 .t-parc{background:#0c2d4a;color:var(--blue);}.t-vanc{background:#3d2500;color:var(--amber);}
+.t-pixrec{background:#0c3030;color:var(--teal);}
 .t-proj{background:#2d1f00;color:#d4a017;border:1px dashed #d4a017;}
 
 .form-g{display:flex;flex-direction:column;gap:3px;margin-bottom:9px;}
@@ -104,6 +105,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
 .tbtn.on-card{background:#0c2d4a;border-color:var(--blue);color:var(--blue);}
 .tbtn.on-parc{background:#0c2d4a;border-color:var(--blue);color:var(--blue);}
 .tbtn.on-vanc{background:#3d2500;border-color:var(--amber);color:var(--amber);}
+.tbtn.on-pixrec{background:#0c3030;border-color:var(--teal);color:var(--teal);}
 .add-btn{width:100%;padding:11px;font-size:14px;font-weight:500;border-radius:10px;cursor:pointer;border:none;background:var(--acc2);color:#fff;margin-top:4px;font-family:'Sora',sans-serif;}
 .add-btn:active{opacity:.85;}
 .hint-box{font-size:11px;padding:7px 10px;border-radius:8px;margin-bottom:10px;line-height:1.5;}
@@ -238,6 +240,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
         <div class="card-title">tipo de lançamento</div>
         <div class="tipo-wrap">
           <button class="tbtn on-sal" onclick="setTipo('sal',this)">salário</button>
+          <button class="tbtn" onclick="setTipo('pixrec',this)">pix recebido</button>
           <button class="tbtn" onclick="setTipo('pix',this)">pix / débito</button>
           <button class="tbtn" onclick="setTipo('reimb',this)">reembolso</button>
           <button class="tbtn" onclick="setTipo('card',this)">crédito (caixinha)</button>
@@ -370,12 +373,13 @@ function calcMes(mes){
   const lancs=getLancsMes(mes);
   const h=HIST.find(x=>x.mes===mes);
   let sal=h?h.sal:0,reimb=h?h.reimb:0,gpes=h?h.gpes:0,card=h?h.card:0,vanc=h?h.vanc:0;
-  let pix_t=0,cred_t=0;
+  let pix_t=0,cred_t=0,pixrec_t=0;
   let nu=0,c6=0,san=0;
   lancs.forEach(l=>{
     if(l.tipo==='sal') sal+=l.valor;
     else if(l.tipo==='reimb') reimb+=l.valor;
-    else if(l.tipo==='vanc'){vanc+=l.valor;}
+    else if(l.tipo==='pixrec') pixrec_t+=l.valor;
+    else if(l.tipo==='vanc') vanc+=l.valor;
     else if(l.tipo==='parc'||l.tipo==='card'){
       gpes+=l.valor;card+=l.valor;cred_t+=l.valor;
       if(l.banco==='Nubank') nu+=l.valor;
@@ -384,8 +388,10 @@ function calcMes(mes){
     }
     else if(l.tipo==='pix'){gpes+=l.valor;pix_t+=l.valor;}
   });
-  const rec_total=sal+reimb;
-  return{sal,reimb,rec_total,gpes,card,vanc,liq:gpes-reimb,pix_t,cred_t,nu,c6,san};
+  const rec_total=sal+reimb+pixrec_t;
+  const liq=gpes-reimb;
+  const saldo=rec_total-(liq+card);
+  return{sal,reimb,pixrec_t,rec_total,gpes,card,vanc,liq,saldo,pix_t,cred_t,nu,c6,san};
 }
 
 function popSels(){
@@ -406,10 +412,9 @@ function renderDash(){
   const[y,mo]=mes.split('-');
   document.getElementById('mes-label').textContent=MESES[parseInt(mo)-1]+' '+y;
   const c=calcMes(mes);
-  const saldo=c.rec_total-(c.liq+c.card);
   document.getElementById('dash-met').innerHTML=`
-    <div class="met"><div class="met-lbl">receitas (sal + reimb)</div><div class="met-val mv-g">${fmt(c.rec_total)}</div></div>
-    <div class="met"><div class="met-lbl">saldo estimado</div><div class="met-val ${saldo>=0?'mv-g':'mv-r'}">${saldo<0?'− ':''}${fmt(saldo)}</div></div>
+    <div class="met"><div class="met-lbl">receitas totais</div><div class="met-val mv-g">${fmt(c.rec_total)}</div></div>
+    <div class="met"><div class="met-lbl">saldo estimado</div><div class="met-val ${c.saldo>=0?'mv-g':'mv-r'}">${c.saldo<0?'− ':''}${fmt(c.saldo)}</div></div>
     <div class="met"><div class="met-lbl">pix / débito</div><div class="met-val mv-r">${fmt(c.pix_t)}</div></div>
     <div class="met"><div class="met-lbl">crédito total</div><div class="met-val mv-b">${fmt(c.cred_t)}</div></div>`;
   document.getElementById('caixinha-val').textContent=fmt(c.card);
@@ -500,13 +505,15 @@ function renderEx(){
   document.getElementById('ex-body').innerHTML=`
     <div class="ex-box">
       <div class="ex-section">receitas</div>
-      <div class="ex-row"><span>salário + entradas</span><span class="mv-g">${fmt(c.sal)}</span></div>
-      <div class="ex-row sub"><span>(+) reembolsos recebidos</span><span class="mv-g">+ ${fmt(c.reimb)}</span></div>
+      <div class="ex-row sub"><span>salário + entradas</span><span class="mv-g">${fmt(c.sal)}</span></div>
+      <div class="ex-row sub"><span>pix recebidos</span><span class="mv-t">${fmt(c.pixrec_t)}</span></div>
+      <div class="ex-row sub"><span>reembolsos recebidos</span><span class="mv-p">${fmt(c.reimb)}</span></div>
       <div class="ex-row"><span>total receitas</span><span class="mv-g">${fmt(c.rec_total)}</span></div>
       <div class="ex-section">gastos pessoais</div>
       <div class="ex-row sub"><span>pix / débito</span><span class="mv-r">${fmt(c.pix_t)}</span></div>
       <div class="ex-row sub"><span>crédito (caixinha)</span><span class="mv-b">${fmt(c.cred_t)}</span></div>
       <div class="ex-row"><span>total bruto</span><span class="mv-r">${fmt(c.gpes)}</span></div>
+      <div class="ex-row sub"><span>(−) reembolsos abatidos</span><span class="mv-p">− ${fmt(c.reimb)}</span></div>
       <div class="ex-row"><span>gastos líquidos</span><span class="mv-r">${fmt(c.liq)}</span></div>
       <div class="ex-section">fatura cartões pessoais</div>
       <div class="ex-row sub"><span>Nubank</span><span class="mv-p">${fmt(c.nu)}</span></div>
@@ -514,6 +521,7 @@ function renderEx(){
       <div class="ex-row sub"><span>Santander</span><span class="mv-t">${fmt(c.san)}</span></div>
       <div class="ex-row"><span>total fatura</span><span class="mv-b">${fmt(c.card)}</span></div>
       <div class="ex-row"><span>custo real do mês</span><span class="${total>c.rec_total?'mv-r':'mv-g'}">${fmt(total)}</span></div>
+      <div class="ex-row"><span>saldo estimado</span><span class="${c.saldo>=0?'mv-g':'mv-r'}">${c.saldo<0?'− ':''}${fmt(c.saldo)}</span></div>
     </div>
     <div class="ex-box ex-vanc">
       <div class="ex-section" style="color:var(--amber);">vancouver — empresa custeia</div>
@@ -528,8 +536,8 @@ function renderLancs(){
   const proj=getProjetos(mes).sort((a,b)=>a.data.localeCompare(b.data));
   const hist=HIST.find(h=>h.mes===mes);
   const el=document.getElementById('lancs-body');
-  const tagMap={sal:'t-sal',pix:'t-pix',reimb:'t-reimb',card:'t-card',parc:'t-parc',vanc:'t-vanc'};
-  const labMap={sal:'Salário',pix:'Pix/débito',reimb:'Reembolso',card:'Caixinha',parc:'Parcela',vanc:'Vancouver'};
+  const tagMap={sal:'t-sal',pix:'t-pix',reimb:'t-reimb',pixrec:'t-pixrec',card:'t-card',parc:'t-parc',vanc:'t-vanc'};
+  const labMap={sal:'Salário',pix:'Pix/débito',reimb:'Reembolso',pixrec:'Pix recebido',card:'Caixinha',parc:'Parcela',vanc:'Vancouver'};
   let html='';
   if(hist) html+=`<div class="hist-note">totais históricos importados da planilha</div>`;
   if(proj.length){
@@ -545,7 +553,7 @@ function renderLancs(){
   }
   if(reais.length){
     html+=`<div class="card">`+reais.map(l=>{
-      const isPos=l.tipo==='sal'||l.tipo==='reimb';
+      const isPos=l.tipo==='sal'||l.tipo==='reimb'||l.tipo==='pixrec';
       const valCls=isPos?'mv-g':l.tipo==='vanc'?'mv-a':(l.tipo==='card'||l.tipo==='parc')?'mv-b':'mv-r';
       const sinal=isPos?'+':'−';
       return`<div class="lanc-row">
@@ -640,9 +648,9 @@ function addTyping(){
 function removeTyping(){const t=document.getElementById('typing-ind');if(t)t.remove();}
 
 function buildConfirmCard(l,idx){
-  const tagMap={sal:'t-sal',pix:'t-pix',reimb:'t-reimb',card:'t-card',parc:'t-parc',vanc:'t-vanc'};
-  const labMap={sal:'Salário',pix:'Pix/débito',reimb:'Reembolso',card:'Caixinha',parc:'Parcela',vanc:'Vancouver'};
-  const isPos=l.tipo==='sal'||l.tipo==='reimb';
+  const tagMap={sal:'t-sal',pix:'t-pix',reimb:'t-reimb',pixrec:'t-pixrec',card:'t-card',parc:'t-parc',vanc:'t-vanc'};
+  const labMap={sal:'Salário',pix:'Pix/débito',reimb:'Reembolso',pixrec:'Pix recebido',card:'Caixinha',parc:'Parcela',vanc:'Vancouver'};
+  const isPos=l.tipo==='sal'||l.tipo==='reimb'||l.tipo==='pixrec';
   const valCls=isPos?'mv-g':l.tipo==='vanc'?'mv-a':'mv-r';
   const sinal=isPos?'+':'−';
   const projNote=l.parcela?`<div style="font-size:11px;color:var(--amber);margin-top:4px;font-family:'DM Mono',monospace;">parcelas futuras projetadas automaticamente</div>`:'';
@@ -696,15 +704,17 @@ async function send(){
   const[y,mo]=mes?mes.split('-'):['',''];
   const mesNome=mo?MESES[parseInt(mo)-1]+' '+y:'mês atual';
   const system=`Você é assistente de controle financeiro do Ionel. Hoje: ${hoje()}. Mês: ${mesNome}.
-TIPOS: sal=salário/receita, pix=débito/pix pessoal, card=crédito pessoal (caixinha), parc=parcelamento pessoal, reimb=reembolso recebido, vanc=gasto Vancouver (empresa).
+TIPOS: sal=salário/receita, pix=débito/pix pessoal (saída), pixrec=pix recebido de alguém (entrada de dinheiro), card=crédito pessoal (caixinha), parc=parcelamento pessoal, reimb=reembolso recebido (abate de gasto), vanc=gasto Vancouver (empresa).
 CATEGORIAS: Habitação, Lazer, Comida, Olaf (pet), Carro, Cuidados pessoais, Vestuário, Viagem, Manutenção, Vancouver, Indeterminado, Outro.
 BANCOS: Santander, Nubank, C6, Inter, Outro.
 
 IMPORTANTE: O usuário pode descrever UM ou VÁRIOS lançamentos de uma vez, inclusive de dias diferentes.
 Sempre responda com um array JSON, mesmo que seja só um lançamento. Sem markdown, sem texto extra:
-[{"tipo":"pix","desc":"Almoço","valor":85,"data":"2026-06-07","cat":"Comida","banco":"Nubank","parcela":null},{"tipo":"card","desc":"Uber","valor":32,"data":"2026-06-07","cat":"Transporte","banco":"Nubank","parcela":null}]
+[{"tipo":"pix","desc":"Almoço","valor":85,"data":"2026-06-07","cat":"Comida","banco":"Nubank","parcela":null}]
 
 Regras:
+- "recebi pix de X" ou "X me mandou" = pixrec (entrada).
+- "paguei", "gastei", "fui no" = pix (saída débito) ou card (saída crédito).
 - Se o usuário mencionar "ontem", use ${new Date(Date.now()-86400000).toISOString().split('T')[0]}.
 - Se mencionar um dia específico (ex: "dia 5"), use esse dia no mês atual.
 - Se não mencionar data, use hoje: ${hoje()}.
