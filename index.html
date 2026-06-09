@@ -394,11 +394,13 @@ window.addEventListener('fb-ready',()=>{
     DB=snap.docs.map(d=>({...d.data(),_docId:d.id}));
     setSyncDot('ok');
     popSels();
-    const tab=document.querySelector('.nav-btn.active');
-    const tabName=['dash','exercicio','lancs','ia','novo'][[...document.querySelectorAll('.nav-btn')].indexOf(tab)];
-    if(tabName==='dash') renderDash();
-    if(tabName==='exercicio') renderEx();
-    if(tabName==='lancs') renderLancs();
+    // Sempre re-renderiza a aba ativa
+    const tabs=['dash','exercicio','lancs','ia','novo'];
+    const activeIdx=[...document.querySelectorAll('.nav-btn')].findIndex(b=>b.classList.contains('active'));
+    const activeTab=tabs[activeIdx]||'dash';
+    if(activeTab==='dash') renderDash();
+    if(activeTab==='exercicio') renderEx();
+    if(activeTab==='lancs') renderLancs();
   },err=>{console.error(err);setSyncDot('err');});
 });
 
@@ -861,7 +863,10 @@ function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrol
 
 // INIT
 document.getElementById('f-data').value=hoje();
-popSels();renderDash();checkKey();
+popSels();
+// Mostra loading no dashboard enquanto Firebase não conecta
+document.getElementById('dash-met').innerHTML='<div class="loading-box" style="grid-column:1/-1;"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>conectando...</span></div>';
+checkKey();
 const cm=document.getElementById('chat-msgs');
 const wd=document.createElement('div');wd.className='msg msg-ai';
 wd.innerHTML=`<div class="ai-av">F</div><div class="bubble">Olá! Descreva um ou vários lançamentos.<br><br>• "gastei 85 no almoço no crédito"<br>• "NuvemShop 452 Vancouver crédito"<br>• "ontem: mercado 180 débito, uber 25 crédito nubank"<br>• "dia 5: posto 150 débito; farmácia 80 crédito"</div>`;
