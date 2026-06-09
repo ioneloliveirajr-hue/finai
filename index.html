@@ -164,7 +164,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
       <div class="logo">fin<span>ai</span></div>
       <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;" id="mes-label"></div>
     </div>
-    <div class="header-sub">controle financeiro com ia · ionel · v8</div>
+    <div class="header-sub">controle financeiro com ia · ionel · v9</div>
   </div>
   <div class="nav">
     <button class="nav-btn active" onclick="goTab('dash')">dashboard</button>
@@ -750,23 +750,32 @@ async function send(){
   const[y,mo]=mes?mes.split('-'):['',''];
   const mesNome=mo?MESES[parseInt(mo)-1]+' '+y:'mês atual';
   const system=`Você é assistente de controle financeiro do Ionel. Hoje: ${hoje()}. Mês: ${mesNome}.
-TIPOS: sal=salário/receita, pix=débito/pix pessoal (saída), pixrec=pix recebido de alguém (entrada de dinheiro), card=crédito pessoal (caixinha), parc=parcelamento pessoal, reimb=reembolso recebido (abate de gasto), vanc=gasto Vancouver (empresa).
+TIPOS (use EXATAMENTE um destes):
+- sal = salário ou qualquer receita recebida
+- pix = saída de dinheiro no débito ou pix (dinheiro sai na hora)
+- pixrec = pix recebido de alguém (entrada de dinheiro)
+- card = gasto no crédito PESSOAL (vai para caixinha pessoal)
+- parc = parcelamento no crédito PESSOAL
+- reimb = reembolso recebido
+- vanc = gasto da EMPRESA VANCOUVER passado no cartão para acumular milhas (empresa ressarce depois)
+
+ATENÇÃO CRÍTICA: Se o gasto for da empresa Vancouver/Juninho Internet, use SEMPRE tipo "vanc". NUNCA use tipo "card" ou "pix" para gastos da Vancouver. Exemplos Vancouver: NuvemShop, Facebook Ads, TikTok Ads, UpSeller, Shopee ads, domínio, hospedagem, software da empresa.
+
 CATEGORIAS: Habitação, Lazer, Comida, Olaf (pet), Carro, Cuidados pessoais, Vestuário, Viagem, Manutenção, Vancouver, Indeterminado, Outro.
 BANCOS: Santander, Nubank, C6, Inter, Outro.
 
-IMPORTANTE: O usuário pode descrever UM ou VÁRIOS lançamentos de uma vez, inclusive de dias diferentes.
-Sempre responda com um array JSON, mesmo que seja só um lançamento. Sem markdown, sem texto extra:
-[{"tipo":"pix","desc":"Almoço","valor":85,"data":"2026-06-07","cat":"Comida","banco":"Nubank","parcela":null}]
+Responda SEMPRE com array JSON, mesmo que seja um lançamento. Sem markdown:
+[{"tipo":"pix","desc":"Almoço","valor":85,"data":"${hoje()}","cat":"Comida","banco":"Nubank","parcela":null}]
 
-Regras:
-- "recebi pix de X" ou "X me mandou" = pixrec (entrada).
-- "paguei", "gastei", "fui no" = pix (saída débito) ou card (saída crédito).
-- Se o usuário mencionar "ontem", use ${new Date(Date.now()-86400000).toISOString().split('T')[0]}.
-- Se mencionar um dia específico (ex: "dia 5"), use esse dia no mês atual.
-- Se não mencionar data, use hoje: ${hoje()}.
-- Se não mencionar banco, use Santander.
-- Para parcelamento, informe parcela ex: "6/10".
-- Se não for lançamento financeiro, responda normalmente em português (não como array).`;
+- "recebi pix de X" ou "X me mandou" = pixrec
+- "paguei/gastei" no débito = pix; no crédito pessoal = card
+- gasto da empresa = vanc
+- "ontem" = ${new Date(Date.now()-86400000).toISOString().split('T')[0]}
+- dia específico (ex: "dia 5") = esse dia no mês atual
+- sem data = hoje: ${hoje()}
+- sem banco = Santander
+- parcelamento: campo parcela ex "6/10"
+- se não for lançamento, responda em português normal (não como array).`;
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
