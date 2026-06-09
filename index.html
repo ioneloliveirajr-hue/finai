@@ -526,13 +526,11 @@ function toggleRecorrentes(){
 }
 
 function renderRecorrentes(){
-  // Pega todos os lançamentos com parcela, agrupa por descrição+valor
   const parcelas=DB.filter(l=>l.parcela);
   if(!parcelas.length){
     document.getElementById('rec-body').innerHTML='<div class="empty" style="padding:1rem;">Nenhuma parcela em aberto.</div>';
     return;
   }
-  // Agrupa: pega o lançamento original (parcela atual mais recente por desc)
   const grupos={};
   parcelas.forEach(l=>{
     const key=l.desc+'|'+l.valor;
@@ -540,27 +538,47 @@ function renderRecorrentes(){
     if(!grupos[key]||pa>grupos[key].pa) grupos[key]={...l,pa,pt};
   });
   const items=Object.values(grupos).sort((a,b)=>a.desc.localeCompare(b.desc));
-  const totalMensal=items.reduce((s,i)=>s+i.valor,0);
+  const totalPes=items.filter(i=>i.tipo!=='vanc').reduce((s,i)=>s+i.valor,0);
+  const totalVanc=items.filter(i=>i.tipo==='vanc').reduce((s,i)=>s+i.valor,0);
+
+  // Atualiza header com totais
+  document.querySelector('.recorrentes-header').innerHTML=`
+    <span class="recorrentes-title">📋 compromissos recorrentes</span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:#2d7a45;font-family:'DM Mono',monospace;">pessoal</div>
+        <div style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:var(--green);">${fmt(totalPes)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:#854F0B;font-family:'DM Mono',monospace;">vancouver</div>
+        <div style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:var(--amber);">${fmt(totalVanc)}</div>
+      </div>
+      <span class="recorrentes-toggle ${document.getElementById('rec-body').classList.contains('open')?'open':''}" id="rec-toggle">▼</span>
+    </div>`;
+  // Reanexa o click após reescrever o header
+  document.querySelector('.recorrentes-header').onclick=toggleRecorrentes;
+
   document.getElementById('rec-body').innerHTML=
     items.map(item=>{
       const pct=Math.round(item.pa/item.pt*100);
       const restantes=item.pt-item.pa;
       const totalRestante=item.valor*restantes;
+      const isVanc=item.tipo==='vanc';
       return`<div class="rec-item">
         <div class="rec-info">
-          <div class="rec-desc">${escHtml(item.desc)}</div>
+          <div class="rec-desc">${escHtml(item.desc)}${isVanc?` <span style="font-size:9px;padding:1px 5px;background:#3d2500;color:var(--amber);border-radius:99px;font-family:'DM Mono',monospace;">vanc</span>`:''}</div>
           <div class="rec-meta">${item.banco} · ${restantes} parcela${restantes>1?'s':''} restante${restantes>1?'s':''} · total ${fmt(totalRestante)}</div>
         </div>
         <div class="rec-progress">
           <div class="rec-bar-track"><div class="rec-bar-fill" style="width:${pct}%;background:${pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--acc)'};"></div></div>
           <div class="rec-parcela">${item.pa}/${item.pt}</div>
         </div>
-        <div class="rec-val">${fmt(item.valor)}/mês</div>
+        <div class="rec-val" style="color:${isVanc?'var(--amber)':'var(--blue)'};">${fmt(item.valor)}/mês</div>
       </div>`;
     }).join('')+
     `<div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:12px;border-top:1px solid var(--border);margin-top:4px;">
       <span style="color:var(--muted);">total mensal em parcelas</span>
-      <span style="font-weight:600;font-family:'DM Mono',monospace;color:var(--blue);">${fmt(totalMensal)}</span>
+      <span style="font-weight:600;font-family:'DM Mono',monospace;color:var(--blue);">${fmt(totalPes+totalVanc)}</span>
     </div>`;
 }
 
