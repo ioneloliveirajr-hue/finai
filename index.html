@@ -158,6 +158,23 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
 .hist-note{font-size:11px;color:var(--muted);background:var(--surface2);border-radius:8px;padding:6px 10px;margin-bottom:.75rem;font-family:'DM Mono',monospace;}
 .proj-section{background:#1a1400;border:1px solid #3d2f00;border-radius:10px;padding:.75rem 1rem;margin-bottom:.875rem;}
 .proj-title{font-size:11px;color:var(--amber);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+.recorrentes-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:.875rem;overflow:hidden;}
+.recorrentes-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;cursor:pointer;user-select:none;}
+.recorrentes-title{font-size:11px;font-weight:500;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;}
+.recorrentes-toggle{font-size:12px;color:var(--muted);transition:transform .2s;}
+.recorrentes-toggle.open{transform:rotate(180deg);}
+.recorrentes-body{padding:0 1rem .875rem;display:none;}
+.recorrentes-body.open{display:block;}
+.rec-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.rec-item:last-child{border-bottom:none;}
+.rec-info{flex:1;min-width:0;}
+.rec-desc{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rec-meta{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;}
+.rec-progress{width:80px;flex-shrink:0;}
+.rec-bar-track{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-bottom:2px;}
+.rec-bar-fill{height:100%;border-radius:2px;background:var(--acc);}
+.rec-parcela{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;text-align:right;}
+.rec-val{font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:var(--blue);white-space:nowrap;flex-shrink:0;}
 .loading-box{display:flex;align-items:center;justify-content:center;padding:3rem;gap:10px;color:var(--muted);font-size:13px;}
 </style>
 </head>
@@ -204,6 +221,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
         </div>
       </div>
       <div class="fat-grid" id="fat-grid"></div>
+      <div class="recorrentes-box">
+        <div class="recorrentes-header" onclick="toggleRecorrentes()">
+          <span class="recorrentes-title">📋 compromissos recorrentes</span>
+          <span class="recorrentes-toggle" id="rec-toggle">▼</span>
+        </div>
+        <div class="recorrentes-body" id="rec-body"></div>
+      </div>
       <div class="card">
         <div class="card-title">gastos diários — débito vs crédito</div>
         <div class="legend">
@@ -491,7 +515,54 @@ function renderDash(){
   renderDiario(mes);renderPizza(mes);renderEvolucao();
 }
 
-function renderDiario(mes){
+function toggleRecorrentes(){
+  const body=document.getElementById('rec-body');
+  const toggle=document.getElementById('rec-toggle');
+  const open=body.classList.toggle('open');
+  toggle.classList.toggle('open',open);
+  if(open) renderRecorrentes();
+}
+
+function renderRecorrentes(){
+  // Pega todos os lançamentos com parcela, agrupa por descrição+valor
+  const parcelas=DB.filter(l=>l.parcela);
+  if(!parcelas.length){
+    document.getElementById('rec-body').innerHTML='<div class="empty" style="padding:1rem;">Nenhuma parcela em aberto.</div>';
+    return;
+  }
+  // Agrupa: pega o lançamento original (parcela atual mais recente por desc)
+  const grupos={};
+  parcelas.forEach(l=>{
+    const key=l.desc+'|'+l.valor;
+    const[pa,pt]=l.parcela.split('/').map(Number);
+    if(!grupos[key]||pa>grupos[key].pa) grupos[key]={...l,pa,pt};
+  });
+  const items=Object.values(grupos).sort((a,b)=>a.desc.localeCompare(b.desc));
+  const totalMensal=items.reduce((s,i)=>s+i.valor,0);
+  document.getElementById('rec-body').innerHTML=
+    items.map(item=>{
+      const pct=Math.round(item.pa/item.pt*100);
+      const restantes=item.pt-item.pa;
+      const totalRestante=item.valor*restantes;
+      return`<div class="rec-item">
+        <div class="rec-info">
+          <div class="rec-desc">${escHtml(item.desc)}</div>
+          <div class="rec-meta">${item.banco} · ${restantes} parcela${restantes>1?'s':''} restante${restantes>1?'s':''} · total ${fmt(totalRestante)}</div>
+        </div>
+        <div class="rec-progress">
+          <div class="rec-bar-track"><div class="rec-bar-fill" style="width:${pct}%;background:${pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--acc)'};"></div></div>
+          <div class="rec-parcela">${item.pa}/${item.pt}</div>
+        </div>
+        <div class="rec-val">${fmt(item.valor)}/mês</div>
+      </div>`;
+    }).join('')+
+    `<div style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:12px;border-top:1px solid var(--border);margin-top:4px;">
+      <span style="color:var(--muted);">total mensal em parcelas</span>
+      <span style="font-weight:600;font-family:'DM Mono',monospace;color:var(--blue);">${fmt(totalMensal)}</span>
+    </div>`;
+}
+
+
   const lancs=getLancsMes(mes);
   const dias=daysInMonth(mes);
   const deb=new Array(dias).fill(0),cred=new Array(dias).fill(0);
