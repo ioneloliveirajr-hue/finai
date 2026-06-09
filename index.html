@@ -164,7 +164,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
       <div class="logo">fin<span>ai</span></div>
       <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;" id="mes-label"></div>
     </div>
-    <div class="header-sub">controle financeiro com ia · ionel · v10</div>
+    <div class="header-sub">controle financeiro com ia · ionel · v12</div>
   </div>
   <div class="nav">
     <button class="nav-btn active" onclick="goTab('dash')">dashboard</button>
@@ -428,12 +428,11 @@ function calcMes(mes){
   const reimb     = reimb_hist + reimb_new;
   const gpes      = gpes_hist + pix_t + cred_t;
   const card      = card_hist + cred_t;
-  // receitas = tudo que entrou no bolso
   const rec_total = sal + pixrec_t + reimb;
-  // gastos líquidos = tudo que saiu (reembolso já está nas receitas, não abate aqui)
   const liq       = gpes;
   const saldo     = rec_total - liq;
-  const caixinha_pes  = card;
+  // caixinha pessoal = apenas crédito novo lançado manualmente (card_hist já foi pago)
+  const caixinha_pes  = cred_t;
   const caixinha_vanc = vanc_card;
   const caixinha_tot  = caixinha_pes + caixinha_vanc;
   return{sal,reimb,pixrec_t,rec_total,gpes,card,vanc,vanc_pix,vanc_card,liq,saldo,pix_t,cred_t,nu,c6,san,caixinha_pes,caixinha_vanc,caixinha_tot};
@@ -480,7 +479,7 @@ function renderDiario(mes){
   const debArr=new Array(dias).fill(0);
   const credArr=new Array(dias).fill(0);
   lancs.forEach(l=>{
-    if(l.tipo==='sal'||l.tipo==='reimb'||l.tipo==='vanc') return;
+    if(l.tipo==='sal'||l.tipo==='reimb'||l.tipo==='pixrec'||l.tipo==='vanc') return;
     const d=new Date(l.data+'T12:00').getDate()-1;
     if(d<0||d>=dias) return;
     if(l.tipo==='pix') debArr[d]+=l.valor;
@@ -530,8 +529,8 @@ function renderEvolucao(){
     return h||hasLancs;
   }).slice(0,6).reverse();
   const labels=all.map(m=>{const[y,mo]=m.split('-');return MESES[parseInt(mo)-1].substring(0,3);});
-  const rec=all.map(m=>Math.round(calcMes(m).sal));
-  const gpes=all.map(m=>Math.round(calcMes(m).gpes));
+  const rec=all.map(m=>Math.round(calcMes(m).rec_total));
+  const gpes=all.map(m=>Math.round(calcMes(m).liq));
   destroyChart('ev');
   charts['ev']=new Chart(document.getElementById('cEv'),{
     type:'line',
@@ -548,7 +547,7 @@ function renderEvolucao(){
 function renderEx(){
   const mes=document.getElementById('mes-ex').value;
   const c=calcMes(mes);
-  const total=c.liq+c.card;
+  const total=c.liq;
   document.getElementById('ex-body').innerHTML=`
     <div class="ex-box">
       <div class="ex-section">receitas</div>
