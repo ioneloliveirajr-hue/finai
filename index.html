@@ -164,7 +164,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Sora',
       <div class="logo">fin<span>ai</span></div>
       <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;" id="mes-label"></div>
     </div>
-    <div class="header-sub">controle financeiro com ia · ionel · v9</div>
+    <div class="header-sub">controle financeiro com ia · ionel · v10</div>
   </div>
   <div class="nav">
     <button class="nav-btn active" onclick="goTab('dash')">dashboard</button>
@@ -403,38 +403,40 @@ function calcMes(mes){
   const lancs=getLancsMes(mes);
   const h=HIST.find(x=>x.mes===mes);
   let sal=h?h.sal:0, reimb_hist=h?h.reimb:0, gpes_hist=h?h.gpes:0, card_hist=h?h.card:0, vanc=h?h.vanc:0;
-  let pix_t=0, cred_t=0, rec_extra=0;
+  let pix_t=0, cred_t=0, pixrec_t=0, reimb_new=0;
   let nu=0, c6=0, san=0;
   let vanc_pix=0, vanc_card=0;
 
   lancs.forEach(l=>{
-    if(l.tipo==='sal')                           sal+=l.valor;
-    else if(l.tipo==='reimb'||l.tipo==='pixrec') rec_extra+=l.valor;
+    if(l.tipo==='sal')        sal+=l.valor;
+    else if(l.tipo==='pixrec') pixrec_t+=l.valor;
+    else if(l.tipo==='reimb')  reimb_new+=l.valor;
     else if(l.tipo==='vanc'){
       vanc+=l.valor;
-      // se credito não foi definido, assume crédito (padrão Vancouver = milhas)
       if(l.credito===false) vanc_pix+=l.valor;
       else                  vanc_card+=l.valor;
     }
     else if(l.tipo==='parc'||l.tipo==='card'){
       cred_t+=l.valor;
-      if(l.banco==='Nubank')      nu+=l.valor;
-      else if(l.banco==='C6')     c6+=l.valor;
-      else                        san+=l.valor;
+      if(l.banco==='Nubank')     nu+=l.valor;
+      else if(l.banco==='C6')    c6+=l.valor;
+      else                       san+=l.valor;
     }
     else if(l.tipo==='pix') pix_t+=l.valor;
   });
 
+  const reimb     = reimb_hist + reimb_new;
   const gpes      = gpes_hist + pix_t + cred_t;
   const card      = card_hist + cred_t;
-  const rec_total = sal + rec_extra + reimb_hist;
+  // receitas = tudo que entrou no bolso
+  const rec_total = sal + pixrec_t + reimb;
+  // gastos líquidos = tudo que saiu (reembolso já está nas receitas, não abate aqui)
   const liq       = gpes;
   const saldo     = rec_total - liq;
-  // caixinha = crédito pessoal + Vancouver crédito (total a reservar para fatura)
   const caixinha_pes  = card;
   const caixinha_vanc = vanc_card;
   const caixinha_tot  = caixinha_pes + caixinha_vanc;
-  return{sal,reimb:rec_extra,pixrec_t:rec_extra,rec_total,gpes,card,vanc,vanc_pix,vanc_card,liq,saldo,pix_t,cred_t,nu,c6,san,caixinha_pes,caixinha_vanc,caixinha_tot};
+  return{sal,reimb,pixrec_t,rec_total,gpes,card,vanc,vanc_pix,vanc_card,liq,saldo,pix_t,cred_t,nu,c6,san,caixinha_pes,caixinha_vanc,caixinha_tot};
 }
 
 function popSels(){
@@ -558,7 +560,6 @@ function renderEx(){
       <div class="ex-row sub"><span>pix / débito</span><span class="mv-r">${fmt(c.pix_t)}</span></div>
       <div class="ex-row sub"><span>crédito (caixinha)</span><span class="mv-b">${fmt(c.cred_t)}</span></div>
       <div class="ex-row"><span>total bruto</span><span class="mv-r">${fmt(c.gpes)}</span></div>
-      <div class="ex-row sub"><span>(−) reembolsos abatidos</span><span class="mv-p">− ${fmt(c.reimb)}</span></div>
       <div class="ex-row"><span>gastos líquidos</span><span class="mv-r">${fmt(c.liq)}</span></div>
       <div class="ex-section">fatura cartões pessoais</div>
       <div class="ex-row sub"><span>Nubank</span><span class="mv-p">${fmt(c.nu)}</span></div>
