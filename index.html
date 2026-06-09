@@ -337,10 +337,33 @@ function fmtK(v){return v>=1000?'R$'+Math.round(v/1000)+'k':'R$'+Math.round(v);}
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function setSyncDot(s){const d=document.getElementById('sync-dot');d.className='sync-dot'+(s==='ok'?' ok':s==='err'?' err':'');}
 
+// MIGRAÇÃO: localStorage → Firebase (roda uma vez)
+async function migrarLocalStorage(){
+  const key='finai_db';
+  const migKey='finai_migrado';
+  if(localStorage.getItem(migKey)) return;
+  const raw=localStorage.getItem(key);
+  if(!raw) return;
+  try{
+    const lancs=JSON.parse(raw);
+    if(!Array.isArray(lancs)||!lancs.length) return;
+    console.log(`Migrando ${lancs.length} lançamentos para Firebase...`);
+    for(const l of lancs){
+      const {id,_docId,...dados}=l;
+      await fbAdd(dados);
+    }
+    localStorage.setItem(migKey,'1');
+    localStorage.removeItem(key);
+    console.log('Migração concluída!');
+    addMsg('ai',`✅ ${lancs.length} lançamento${lancs.length>1?'s':''} migrado${lancs.length>1?'s':''} do armazenamento local para a nuvem automaticamente!`);
+  }catch(e){console.error('Erro na migração:',e);}
+}
+
 // Firebase init
 window.addEventListener('fb-ready',()=>{
   fbReady=true;
   setSyncDot('');
+  migrarLocalStorage();
   const {db,collection,onSnapshot,query,orderBy}=window._fb;
   const q=query(collection(db,'lancamentos'),orderBy('ts','desc'));
   unsubscribe=onSnapshot(q,snap=>{
