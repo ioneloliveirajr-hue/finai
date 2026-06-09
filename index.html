@@ -864,9 +864,19 @@ function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrol
 // INIT
 document.getElementById('f-data').value=hoje();
 popSels();
-// Mostra loading no dashboard enquanto Firebase não conecta
 document.getElementById('dash-met').innerHTML='<div class="loading-box" style="grid-column:1/-1;"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>conectando...</span></div>';
 checkKey();
+
+// Timeout: se Firebase não conectar em 8s, mostra erro
+setTimeout(()=>{
+  if(document.getElementById('sync-dot').classList.contains('ok')) return;
+  setSyncDot('err');
+  document.getElementById('dash-met').innerHTML=`<div style="grid-column:1/-1;padding:1rem;background:#1a0a0a;border:1px solid var(--red);border-radius:10px;font-size:12px;color:var(--red);line-height:1.7;">
+    ❌ Não foi possível conectar ao banco de dados.<br>
+    <span style="color:var(--muted);">Verifique sua conexão com a internet e recarregue a página.</span>
+  </div>`;
+},8000);
+
 const cm=document.getElementById('chat-msgs');
 const wd=document.createElement('div');wd.className='msg msg-ai';
 wd.innerHTML=`<div class="ai-av">F</div><div class="bubble">Olá! Descreva um ou vários lançamentos.<br><br>• "gastei 85 no almoço no crédito"<br>• "NuvemShop 452 Vancouver crédito"<br>• "ontem: mercado 180 débito, uber 25 crédito nubank"<br>• "dia 5: posto 150 débito; farmácia 80 crédito"</div>`;
